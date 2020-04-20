@@ -9,11 +9,17 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:imagepreview/dimens.dart';
 import 'package:imagepreview/primitive_navigation_bar.dart';
 import 'package:imagepreview/support_activity_indicator.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+
+typedef ImagePreviewNavigationBarBuilder = Widget Function(
+  BuildContext context,
+  int index,
+  int count,
+  VoidCallback onBackPressed,
+);
 
 class ImageOptions {
   final String url;
@@ -42,6 +48,7 @@ class ImagePreview {
     int initialIndex = 0,
     @required List<ImageOptions> images,
     ValueChanged<int> onIndexChanged,
+    ImagePreviewNavigationBarBuilder navigationBarBuilder = _buildNavigationBar,
     IndexedWidgetBuilder bottomBarBuilder,
     ValueChanged<ImageOptions> onLongPressed,
   }) {
@@ -55,6 +62,7 @@ class ImagePreview {
         initialIndex: initialIndex,
         images: _images,
         onIndexChanged: onIndexChanged,
+        navigationBarBuilder: navigationBarBuilder,
         bottomBarBuilder: bottomBarBuilder,
         onLongPressed: onLongPressed,
       ),
@@ -64,6 +72,7 @@ class ImagePreview {
   static Future<T> previewSingle<T>(
     BuildContext context,
     ImageOptions image, {
+    ImagePreviewNavigationBarBuilder navigationBarBuilder = _buildNavigationBar,
     WidgetBuilder bottomBarBuilder,
     ValueChanged<ImageOptions> onLongPressed,
   }) {
@@ -74,6 +83,7 @@ class ImagePreview {
       context,
       ImagePreviewPage.single(
         image,
+        navigationBarBuilder: navigationBarBuilder,
         bottomBarBuilder: bottomBarBuilder,
         onLongPressed: onLongPressed,
       ),
@@ -88,6 +98,19 @@ class ImagePreview {
         fullscreenDialog: false,
         builder: (context) => widget,
       ),
+    );
+  }
+
+  static Widget _buildNavigationBar(
+    BuildContext context,
+    int index,
+    int count,
+    VoidCallback onBackPressed,
+  ) {
+    return _DefaultNavigationBar(
+      currentIndex: index,
+      count: count,
+      onBackPressed: onBackPressed,
     );
   }
 }
@@ -245,6 +268,7 @@ class ImagePreviewPage extends StatefulWidget {
   final int initialIndex;
   final List<ImageOptions> images;
   final ValueChanged<int> onIndexChanged;
+  final ImagePreviewNavigationBarBuilder navigationBarBuilder;
   final IndexedWidgetBuilder bottomBarBuilder;
   final ValueChanged<ImageOptions> onLongPressed;
 
@@ -253,6 +277,7 @@ class ImagePreviewPage extends StatefulWidget {
     this.initialIndex = 0,
     this.images,
     this.onIndexChanged,
+    this.navigationBarBuilder,
     this.bottomBarBuilder,
     this.onLongPressed,
   })  : assert(images != null && images.length > 0),
@@ -262,11 +287,13 @@ class ImagePreviewPage extends StatefulWidget {
   factory ImagePreviewPage.single(
     ImageOptions image, {
     WidgetBuilder bottomBarBuilder,
+    ImagePreviewNavigationBarBuilder navigationBarBuilder,
     ValueChanged<ImageOptions> onLongPressed,
   }) {
     return ImagePreviewPage(
       images: [image],
       onLongPressed: onLongPressed,
+      navigationBarBuilder: navigationBarBuilder,
       bottomBarBuilder: bottomBarBuilder == null
           ? null
           : (context, index) {
@@ -283,16 +310,17 @@ const double _kMaxDragDistance = 200;
 const Duration _kDuration = Duration(milliseconds: 300);
 
 class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerProviderStateMixin {
-  final _bottomInfoKey = GlobalKey();
+  final _navigationBarKey = GlobalKey();
+  final _bottomBarKey = GlobalKey();
 
   int _currentIndex = 0;
   PageController _pageController;
   Offset _startPosition;
   Offset _translationPosition;
   double _scaleOffset;
-  double _navBarOffset;
   double _opacity;
   double _dragDistance;
+  double _navBarOffsetPixels;
   double _bottomOffsetPixels;
 
   @override
@@ -333,24 +361,24 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
     if (_translationPosition != Offset.zero) {
       return;
     }
-    double navBarOffset;
+    double navBarOffsetPixels;
     double bottomOffsetPixels;
     switch (scaleState) {
       case PhotoViewScaleState.covering:
       case PhotoViewScaleState.originalSize:
       case PhotoViewScaleState.zoomedIn:
-        navBarOffset = -1.0;
-        bottomOffsetPixels = -_bottomInfoKey.currentContext?.size?.height ?? 0;
+        navBarOffsetPixels = -_navigationBarKey.currentContext?.size?.height ?? 0;
+        bottomOffsetPixels = -_bottomBarKey.currentContext?.size?.height ?? 0;
         break;
       case PhotoViewScaleState.initial:
       case PhotoViewScaleState.zoomedOut:
       default:
-        navBarOffset = 0;
+        navBarOffsetPixels = 0;
         bottomOffsetPixels = 0;
         break;
     }
-    if (navBarOffset != _navBarOffset || bottomOffsetPixels != _bottomOffsetPixels) {
-      _navBarOffset = navBarOffset;
+    if (navBarOffsetPixels != _navBarOffsetPixels || bottomOffsetPixels != _bottomOffsetPixels) {
+      _navBarOffsetPixels = navBarOffsetPixels;
       _bottomOffsetPixels = bottomOffsetPixels;
       setState(() {});
     }
@@ -365,9 +393,10 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
     var positionOffset = details.localPosition - _startPosition;
     _dragDistance = positionOffset.dy.abs();
     _scaleOffset = _dragDistance / (size.height * 2);
-    _navBarOffset = _dragDistance < 0 ? 0 : -_dragDistance / _kMaxDragDistance;
     _opacity = (1 - _dragDistance / _kMaxDragDistance).clamp(0.0, 1.0);
-    _bottomOffsetPixels = (_bottomInfoKey.currentContext?.size?.height ?? 0) * _navBarOffset;
+    var barOffset = _dragDistance < 0 ? 0 : -_dragDistance / _kMaxDragDistance;
+    _navBarOffsetPixels = (_navigationBarKey.currentContext?.size?.height ?? 0) * barOffset;
+    _bottomOffsetPixels = (_bottomBarKey.currentContext?.size?.height ?? 0) * barOffset;
     _translationPosition = positionOffset + _startPosition * _scaleOffset;
     setState(() {});
   }
@@ -384,9 +413,9 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
     _startPosition = Offset.zero;
     _translationPosition = Offset.zero;
     _scaleOffset = 0.0;
-    _navBarOffset = 0.0;
     _opacity = 1.0;
     _dragDistance = 0.0;
+    _navBarOffsetPixels = 0.0;
     _bottomOffsetPixels = 0.0;
     setState(() {});
   }
@@ -427,8 +456,23 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildNavigationBar() {
+    if (widget.navigationBarBuilder == null) {
+      return null;
+    }
+    return Builder(
+      builder: (context) {
+        return widget.navigationBarBuilder(
+          context,
+          _currentIndex,
+          widget.images.length,
+          _onTap,
+        );
+      },
+    );
+  }
+
+  Widget _buildBottomBar() {
     Widget bottomBar;
     if (widget.bottomBarBuilder != null) {
       bottomBar = Builder(
@@ -445,6 +489,11 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
         child: bottomBar,
       );
     }
+    return bottomBar;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     var scale = 1.0 - _scaleOffset;
     var positionOffset = _translationPosition;
     var duration = Duration(
@@ -513,7 +562,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
                         ],
                       ),
                       child: Container(
-                        key: _bottomInfoKey,
+                        key: _bottomBarKey,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
@@ -526,14 +575,14 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
                         ),
                         constraints: BoxConstraints(
                           minHeight: 0,
-                          maxHeight: bottomBar == null ? 0 : queryData.size.height / 4,
+                          maxHeight: queryData.size.height / 4,
                         ),
                         child: AnimatedSize(
                           duration: _kDuration,
                           vsync: this,
                           alignment: Alignment.topCenter,
                           child: ClipRect(
-                            child: bottomBar,
+                            child: _buildBottomBar(),
                           ),
                         ),
                       ),
@@ -541,16 +590,11 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
                   ),
                   AnimatedPositioned(
                     left: 0,
-                    top: (navBarPersistentHeight + queryData.padding.top) * _navBarOffset,
+                    top: _navBarOffsetPixels,
                     right: 0,
                     duration: duration,
-                    child: PrimitiveNavigationBar(
-                      middle: Text('${_currentIndex + 1}/${widget.images.length}'),
-                      padding: EdgeInsetsDirectional.only(
-                        start: 10,
-                        end: 10,
-                      ),
-                      brightness: Brightness.dark,
+                    child: Container(
+                      key: _navigationBarKey,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -561,12 +605,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
                           end: Alignment.bottomCenter,
                         ),
                       ),
-                      leading: CupertinoButton(
-                        child: Text('关闭'),
-                        padding: EdgeInsets.zero,
-                        borderRadius: BorderRadius.zero,
-                        onPressed: _onTap,
-                      ),
+                      child: _buildNavigationBar(),
                     ),
                   ),
                 ],
@@ -574,6 +613,38 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DefaultNavigationBar extends StatelessWidget {
+  final int currentIndex;
+  final int count;
+  final VoidCallback onBackPressed;
+
+  const _DefaultNavigationBar({
+    Key key,
+    @required this.currentIndex,
+    @required this.count,
+    @required this.onBackPressed,
+  })  : assert(currentIndex != null && count != null && currentIndex < count),
+        super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return PrimitiveNavigationBar(
+      middle: Text('${currentIndex + 1}/$count'),
+      padding: EdgeInsetsDirectional.only(
+        start: 10,
+        end: 10,
+      ),
+      brightness: Brightness.dark,
+      leading: CupertinoButton(
+        child: Text('关闭'),
+        padding: EdgeInsets.zero,
+        borderRadius: BorderRadius.zero,
+        onPressed: onBackPressed,
       ),
     );
   }
