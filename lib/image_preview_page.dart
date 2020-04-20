@@ -351,7 +351,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     _navBarOffset = _dragDistance < 0 ? 0 : -_dragDistance / _kMaxDragDistance;
     _opacity = (1 - _dragDistance / _kMaxDragDistance).clamp(0.0, 1.0);
     _bottomOffsetPixels = (_bottomInfoKey.currentContext?.size?.height ?? 0) * _navBarOffset;
-    _translationPosition = positionOffset + size.center(Offset.zero) * _scaleOffset;
+    _translationPosition = positionOffset + _startPosition * _scaleOffset;
     setState(() {});
   }
 
