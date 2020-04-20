@@ -197,13 +197,26 @@ class _HeroTag {
 class ImagePreviewHero extends StatelessWidget {
   final String tag;
   final Widget child;
+  final CreateRectTween createRectTween;
+  final HeroFlightShuttleBuilder flightShuttleBuilder;
+  final HeroPlaceholderBuilder placeholderBuilder;
+  final bool transitionOnUserGestures;
 
   const ImagePreviewHero({
     Key key,
     @required this.tag,
     @required this.child,
+    this.createRectTween,
+    this.flightShuttleBuilder,
+    this.placeholderBuilder = _buildPlaceholder,
+    this.transitionOnUserGestures = false,
   })  : assert(child != null),
+        assert(transitionOnUserGestures != null),
         super(key: key);
+
+  static Widget _buildPlaceholder(BuildContext context, Size heroSize, Widget child) {
+    return child;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -213,6 +226,10 @@ class ImagePreviewHero extends StatelessWidget {
     return Hero(
       tag: _buildHeroTag(tag),
       child: child,
+      createRectTween: createRectTween,
+      flightShuttleBuilder: flightShuttleBuilder,
+      placeholderBuilder: placeholderBuilder,
+      transitionOnUserGestures: transitionOnUserGestures,
     );
   }
 
