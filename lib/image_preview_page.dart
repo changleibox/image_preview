@@ -45,7 +45,7 @@ class ImagePreview {
     IndexedWidgetBuilder bottomBarBuilder,
     ValueChanged<ImageOptions> onLongPressed,
   }) {
-    final _images = images?.where((image) => image.isNotEmpty)?.toList();
+    final _images = images?.where((image) => image != null && image.isNotEmpty)?.toList();
     if (_images == null || _images.isEmpty) {
       return Future.value();
     }
@@ -53,7 +53,7 @@ class ImagePreview {
       context,
       ImagePreviewPage(
         initialIndex: initialIndex,
-        images: images?.where((image) => image.isNotEmpty)?.toList(),
+        images: _images,
         onIndexChanged: onIndexChanged,
         bottomBarBuilder: bottomBarBuilder,
         onLongPressed: onLongPressed,
