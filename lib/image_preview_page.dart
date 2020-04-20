@@ -405,18 +405,12 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     if (event != null) {
       offset = event.cumulativeBytesLoaded.toDouble() / event.expectedTotalBytes.toDouble();
     }
-    Widget child = CupertinoActivityIndicator(
-      radius: 14,
-      animating: offset == null,
-    );
-    if (offset != null) {
-      child = SupportCupertinoActivityIndicator(
-        radius: 14,
-        position: offset,
-      );
-    }
     return Center(
-      child: child,
+      child: SupportCupertinoActivityIndicator(
+        radius: 14,
+        animating: offset == null,
+        position: offset,
+      ),
     );
   }
 
