@@ -38,19 +38,18 @@ class _PluginExamplePage extends StatelessWidget {
             onPressed: () {
               ImagePreview.preview(
                 context,
-                images: [
-                  ImageOptions(
+                images: List.generate(10, (index) {
+                  return ImageOptions(
                     url: testAvatarUrl,
                     tag: testAvatarUrl,
-                  ),
-                  ImageOptions(
-                    url: testAvatarUrl,
-                    tag: testAvatarUrl,
-                  ),
-                ],
+                  );
+                }),
                 bottomBarBuilder: (context, int index) {
+                  if (index % 4 == 1) {
+                    return SizedBox.shrink();
+                  }
                   return Container(
-                    height: index.isOdd ? null : 200,
+                    height: index.isEven ? null : MediaQuery.of(context).size.height / 2,
                     padding: EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 10,

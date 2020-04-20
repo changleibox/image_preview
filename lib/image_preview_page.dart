@@ -450,6 +450,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
     var duration = Duration(
       milliseconds: positionOffset == Offset.zero ? 200 : 0,
     );
+    var queryData = MediaQuery.of(context);
     return CupertinoTheme(
       data: CupertinoTheme.of(context).copyWith(
         primaryColor: CupertinoColors.white,
@@ -460,7 +461,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
         child: CupertinoPageScaffold(
           backgroundColor: CupertinoColors.black.withOpacity(_opacity),
           child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(
+            data: queryData.copyWith(
               textScaleFactor: 1.0,
             ),
             child: GestureDetector(
@@ -525,7 +526,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
                         ),
                         constraints: BoxConstraints(
                           minHeight: 0,
-                          maxHeight: bottomBar == null ? 0 : MediaQuery.of(context).size.height / 4,
+                          maxHeight: bottomBar == null ? 0 : queryData.size.height / 4,
                         ),
                         child: AnimatedSize(
                           duration: _kDuration,
@@ -540,7 +541,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
                   ),
                   AnimatedPositioned(
                     left: 0,
-                    top: (navBarPersistentHeight + MediaQuery.of(context).padding.top) * _navBarOffset,
+                    top: (navBarPersistentHeight + queryData.padding.top) * _navBarOffset,
                     right: 0,
                     duration: duration,
                     child: PrimitiveNavigationBar(
