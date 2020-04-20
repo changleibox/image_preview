@@ -439,7 +439,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
     );
   }
 
-  PhotoViewGalleryPageOptions _buildItem(BuildContext context, int index) {
+  PhotoViewGalleryPageOptions _buildPageOptions(BuildContext context, int index) {
     final image = widget.images[index];
     final heroTag = ImagePreviewHero._buildHeroTag(image.tag);
     return PhotoViewGalleryPageOptions(
@@ -539,7 +539,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
                       onPageChanged: _onPageChanged,
                       loadingBuilder: _buildLoading,
                       scaleStateChangedCallback: _onScaleStateChanged,
-                      builder: _buildItem,
+                      builder: _buildPageOptions,
                     ),
                   ),
                   AnimatedPositioned(
