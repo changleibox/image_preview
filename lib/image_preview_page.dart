@@ -431,14 +431,18 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
   Widget build(BuildContext context) {
     Widget bottomBar;
     if (widget.bottomBarBuilder != null) {
-      bottomBar = widget.bottomBarBuilder(context, _currentIndex);
+      bottomBar = Builder(
+        builder: (context) {
+          return widget.bottomBarBuilder(
+            context,
+            _currentIndex,
+          );
+        },
+      );
     }
     if (bottomBar != null) {
-      bottomBar = SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: bottomBar,
-        ),
+      bottomBar = SingleChildScrollView(
+        child: bottomBar,
       );
     }
     var scale = 1.0 - _scaleOffset;

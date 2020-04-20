@@ -42,6 +42,45 @@ class _PluginExamplePage extends StatelessWidget {
                   url: testAvatarUrl,
                   tag: testAvatarUrl,
                 ),
+                bottomBarBuilder: (context) {
+                  return Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    color: CupertinoDynamicColor.resolve(
+                      CupertinoColors.secondarySystemGroupedBackground,
+                      context,
+                    ).withOpacity(0.5),
+                    child: SafeArea(
+                      top: false,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '测试标题',
+                            style: TextStyle(
+                              color: CupertinoDynamicColor.resolve(
+                                CupertinoColors.label,
+                                context,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '测试内容',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: CupertinoDynamicColor.resolve(
+                                CupertinoColors.secondaryLabel,
+                                context,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               );
             },
             child: ImagePreviewHero(
