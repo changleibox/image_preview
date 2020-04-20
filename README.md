@@ -1,6 +1,6 @@
 # imagepreview
 
-A new Flutter plugin.
+怎么用Flutter自定义一个图片预览页面，具有下滑关闭，点击关闭，放大缩小等功能。
 
 ## Getting Started
 
