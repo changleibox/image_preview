@@ -269,11 +269,9 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
   final _bottomInfoKey = GlobalKey();
 
   int _currentIndex = 0;
-  PhotoViewController _photoViewController;
   PageController _pageController;
   Offset _startPosition;
-  Offset _currentPosition;
-  double _startScale;
+  Offset _translationPosition;
   double _scaleOffset;
   double _navBarOffset;
   double _opacity;
@@ -284,7 +282,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    _photoViewController = PhotoViewController();
     _pageController = PageController(initialPage: widget.initialIndex);
     _pageController.addListener(_reset);
     _reset();
@@ -292,7 +289,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
 
   @override
   void dispose() {
-    _photoViewController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -317,7 +313,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
   }
 
   _onScaleStateChanged(PhotoViewScaleState scaleState) {
-    if (_currentPosition != Offset.zero) {
+    if (_translationPosition != Offset.zero) {
       return;
     }
     double navBarOffset;
@@ -345,17 +341,17 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
 
   _onVerticalDragStart(DragStartDetails details) {
     _startPosition = details.localPosition;
-    _startScale = _photoViewController.scale ?? 0;
   }
 
   _onVerticalDragUpdate(DragUpdateDetails details) {
-    _currentPosition = details.localPosition;
-    _dragDistance = (_currentPosition - _startPosition).dy.abs();
-    _scaleOffset = _dragDistance / (MediaQuery.of(context).size.height * 2);
+    var size = MediaQuery.of(context).size;
+    var positionOffset = details.localPosition - _startPosition;
+    _dragDistance = positionOffset.dy.abs();
+    _scaleOffset = _dragDistance / (size.height * 2);
     _navBarOffset = _dragDistance < 0 ? 0 : -_dragDistance / _kMaxDragDistance;
     _opacity = (1 - _dragDistance / _kMaxDragDistance).clamp(0.0, 1.0);
-    _photoViewController.scale = _startScale * (1 - _scaleOffset);
     _bottomOffsetPixels = (_bottomInfoKey.currentContext?.size?.height ?? 0) * _navBarOffset;
+    _translationPosition = positionOffset + size.center(Offset.zero) * _scaleOffset;
     setState(() {});
   }
 
@@ -369,14 +365,12 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
 
   _reset() {
     _startPosition = Offset.zero;
-    _currentPosition = Offset.zero;
-    _startScale = 1.0;
+    _translationPosition = Offset.zero;
     _scaleOffset = 0.0;
     _navBarOffset = 0.0;
     _opacity = 1.0;
     _dragDistance = 0.0;
     _bottomOffsetPixels = 0.0;
-    _photoViewController.reset();
     setState(() {});
   }
 
@@ -413,7 +407,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     final image = widget.images[index];
     final heroTag = ImagePreviewHero._buildHeroTag(image.tag);
     return PhotoViewGalleryPageOptions(
-      controller: _photoViewController,
       imageProvider: _childProvider(index),
       initialScale: PhotoViewComputedScale.contained,
       basePosition: Alignment.center,
@@ -437,9 +430,10 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
         ),
       );
     }
-    var offset = _currentPosition - _startPosition;
+    var scale = 1.0 - _scaleOffset;
+    var positionOffset = _translationPosition;
     var duration = Duration(
-      milliseconds: offset == Offset.zero ? 200 : 0,
+      milliseconds: positionOffset == Offset.zero ? 200 : 0,
     );
     return CupertinoTheme(
       data: CupertinoTheme.of(context).copyWith(
@@ -465,7 +459,11 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                 fit: StackFit.expand,
                 children: <Widget>[
                   AnimatedContainer(
-                    transform: Matrix4.translationValues(offset.dx, offset.dy, 0.0),
+                    transform: Matrix4.translationValues(
+                      positionOffset.dx,
+                      positionOffset.dy,
+                      0,
+                    )..scale(scale, scale),
                     duration: duration,
                     curve: Curves.ease,
                     child: PhotoViewGallery.builder(
