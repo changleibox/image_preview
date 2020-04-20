@@ -294,11 +294,7 @@ class ImagePreviewPage extends StatefulWidget {
       images: [image],
       onLongPressed: onLongPressed,
       navigationBarBuilder: navigationBarBuilder,
-      bottomBarBuilder: bottomBarBuilder == null
-          ? null
-          : (context, index) {
-              return bottomBarBuilder(context);
-            },
+      bottomBarBuilder: bottomBarBuilder == null ? null : (context, index) => bottomBarBuilder(context),
     );
   }
 
