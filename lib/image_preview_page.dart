@@ -282,7 +282,7 @@ class ImagePreviewPage extends StatefulWidget {
 const double _kMaxDragDistance = 200;
 const Duration _kDuration = Duration(milliseconds: 300);
 
-class _ImagePreviewPageState extends State<ImagePreviewPage> {
+class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerProviderStateMixin {
   final _bottomInfoKey = GlobalKey();
 
   int _currentIndex = 0;
@@ -511,7 +511,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                           ),
                         ],
                       ),
-                      child: AnimatedContainer(
+                      child: Container(
                         key: _bottomInfoKey,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -527,9 +527,13 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                           minHeight: 0,
                           maxHeight: bottomBar == null ? 0 : MediaQuery.of(context).size.height / 4,
                         ),
-                        duration: _kDuration,
-                        child: ClipRect(
-                          child: bottomBar,
+                        child: AnimatedSize(
+                          duration: _kDuration,
+                          vsync: this,
+                          alignment: Alignment.topCenter,
+                          child: ClipRect(
+                            child: bottomBar,
+                          ),
                         ),
                       ),
                     ),

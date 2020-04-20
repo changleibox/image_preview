@@ -36,22 +36,25 @@ class _PluginExamplePage extends StatelessWidget {
             borderRadius: BorderRadius.zero,
             padding: EdgeInsets.zero,
             onPressed: () {
-              ImagePreview.previewSingle(
+              ImagePreview.preview(
                 context,
-                ImageOptions(
-                  url: testAvatarUrl,
-                  tag: testAvatarUrl,
-                ),
-                bottomBarBuilder: (context) {
+                images: [
+                  ImageOptions(
+                    url: testAvatarUrl,
+                    tag: testAvatarUrl,
+                  ),
+                  ImageOptions(
+                    url: testAvatarUrl,
+                    tag: testAvatarUrl,
+                  ),
+                ],
+                bottomBarBuilder: (context, int index) {
                   return Container(
+                    height: index.isOdd ? null : 200,
                     padding: EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 10,
                     ),
-                    color: CupertinoDynamicColor.resolve(
-                      CupertinoColors.secondarySystemGroupedBackground,
-                      context,
-                    ).withOpacity(0.5),
                     child: SafeArea(
                       top: false,
                       child: Column(
