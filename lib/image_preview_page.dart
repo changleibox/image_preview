@@ -270,7 +270,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
 
   int _currentIndex = 0;
   PhotoViewController _photoViewController;
-  PhotoViewScaleStateController _photoViewScaleStateController;
   PageController _pageController;
   Offset _startPosition;
   Offset _currentPosition;
@@ -287,21 +286,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _photoViewController = PhotoViewController();
-    _photoViewController.addIgnorableListener(() {
-      if (!_photoViewScaleStateController.hasChanged) {
-        return;
-      }
-      var prevScaleState = _photoViewScaleStateController.prevScaleState;
-      _onScaleChanged(prevScaleState == PhotoViewScaleState.zoomedIn);
-    });
-    _photoViewScaleStateController = PhotoViewScaleStateController();
-    _photoViewScaleStateController.addIgnorableListener(() {
-      if (!_photoViewScaleStateController.hasChanged) {
-        return;
-      }
-      var prevScaleState = _photoViewScaleStateController.prevScaleState;
-      _onScaleChanged(prevScaleState != PhotoViewScaleState.initial);
-    });
     _pageController = PageController(initialPage: widget.initialIndex);
     _pageController.addListener(_reset);
     _reset();
@@ -310,7 +294,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
   @override
   void dispose() {
     _photoViewController.dispose();
-    _photoViewScaleStateController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -334,11 +317,11 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     }
   }
 
-  _onScaleChanged(bool showAction) {
+  _onScaleStateChanged(PhotoViewScaleState scaleState) {
     if (_currentPosition != Offset.zero) {
       return;
     }
-    if (showAction) {
+    if (scaleState == PhotoViewScaleState.initial || scaleState == PhotoViewScaleState.zoomedOut) {
       _navBarOffset = 0;
       _bottomOffsetPixels = 0;
     } else {
@@ -383,8 +366,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     _opacity = 1.0;
     _dragDistance = 0.0;
     _bottomOffsetPixels = 0.0;
-    //_photoViewController.reset();
-    _photoViewScaleStateController.reset();
+    _photoViewController.reset();
     _animating = false;
     setState(() {});
   }
@@ -423,7 +405,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     final heroTag = ImagePreviewHero._buildHeroTag(image.tag);
     return PhotoViewGalleryPageOptions(
       controller: _photoViewController,
-      scaleStateController: _photoViewScaleStateController,
       imageProvider: _childProvider(index),
       initialScale: PhotoViewComputedScale.contained,
       basePosition: Alignment.center,
@@ -488,7 +469,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                       pageController: _pageController,
                       onPageChanged: _onPageChanged,
                       loadingBuilder: _buildLoading,
-                      // scrollPhysics: const BouncingScrollPhysics(),
+                      scaleStateChangedCallback: _onScaleStateChanged,
                       builder: _buildItem,
                     ),
                   ),
