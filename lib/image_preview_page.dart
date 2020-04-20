@@ -321,15 +321,28 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     if (_currentPosition != Offset.zero) {
       return;
     }
-    if (scaleState == PhotoViewScaleState.initial || scaleState == PhotoViewScaleState.zoomedOut) {
-      _navBarOffset = 0;
-      _bottomOffsetPixels = 0;
-    } else {
-      _navBarOffset = -1.0;
-      _bottomOffsetPixels = -_bottomInfoKey.currentContext?.size?.height ?? 0;
+    double navBarOffset;
+    double bottomOffsetPixels;
+    switch (scaleState) {
+      case PhotoViewScaleState.covering:
+      case PhotoViewScaleState.originalSize:
+      case PhotoViewScaleState.zoomedIn:
+        navBarOffset = -1.0;
+        bottomOffsetPixels = -_bottomInfoKey.currentContext?.size?.height ?? 0;
+        break;
+      case PhotoViewScaleState.initial:
+      case PhotoViewScaleState.zoomedOut:
+      default:
+        navBarOffset = 0;
+        bottomOffsetPixels = 0;
+        break;
     }
-    _animating = true;
-    setState(() {});
+    if (navBarOffset != _navBarOffset || bottomOffsetPixels != _bottomOffsetPixels) {
+      _navBarOffset = navBarOffset;
+      _bottomOffsetPixels = bottomOffsetPixels;
+      _animating = true;
+      setState(() {});
+    }
   }
 
   _onVerticalDragStart(DragStartDetails details) {
