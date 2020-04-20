@@ -279,7 +279,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
   double _opacity;
   double _dragDistance;
   double _bottomOffsetPixels;
-  bool _animating = false;
 
   @override
   void initState() {
@@ -340,7 +339,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     if (navBarOffset != _navBarOffset || bottomOffsetPixels != _bottomOffsetPixels) {
       _navBarOffset = navBarOffset;
       _bottomOffsetPixels = bottomOffsetPixels;
-      _animating = true;
       setState(() {});
     }
   }
@@ -358,7 +356,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     _opacity = (1 - _dragDistance / _kMaxDragDistance).clamp(0.0, 1.0);
     _photoViewController.scale = _startScale * (1 - _scaleOffset);
     _bottomOffsetPixels = (_bottomInfoKey.currentContext?.size?.height ?? 0) * _navBarOffset;
-    _animating = false;
     setState(() {});
   }
 
@@ -380,7 +377,6 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     _dragDistance = 0.0;
     _bottomOffsetPixels = 0.0;
     _photoViewController.reset();
-    _animating = false;
     setState(() {});
   }
 
@@ -441,7 +437,10 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
         ),
       );
     }
-    final offset = _currentPosition - _startPosition;
+    var offset = _currentPosition - _startPosition;
+    var duration = Duration(
+      milliseconds: offset == Offset.zero ? 200 : 0,
+    );
     return CupertinoTheme(
       data: CupertinoTheme.of(context).copyWith(
         primaryColor: CupertinoColors.white,
@@ -467,9 +466,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                 children: <Widget>[
                   AnimatedContainer(
                     transform: Matrix4.translationValues(offset.dx, offset.dy, 0.0),
-                    duration: Duration(
-                      milliseconds: offset == Offset.zero ? 200 : 0,
-                    ),
+                    duration: duration,
                     curve: Curves.ease,
                     child: PhotoViewGallery.builder(
                       itemCount: widget.images.length,
@@ -490,8 +487,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                     left: 0,
                     right: 0,
                     bottom: _bottomOffsetPixels,
-                    duration: _animating ? _kDuration : Duration.zero,
-                    onEnd: () => _animating = false,
+                    duration: duration,
                     child: DefaultTextStyle(
                       style: DefaultTextStyle.of(context).style.copyWith(
                         shadows: [
@@ -529,8 +525,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                     left: 0,
                     top: (navBarPersistentHeight + MediaQuery.of(context).padding.top) * _navBarOffset,
                     right: 0,
-                    duration: _animating ? _kDuration : Duration.zero,
-                    onEnd: () => _animating = false,
+                    duration: duration,
                     child: PrimitiveNavigationBar(
                       middle: Text('${_currentIndex + 1}/${widget.images.length}'),
                       padding: EdgeInsetsDirectional.only(
