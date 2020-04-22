@@ -9,10 +9,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:imagepreview/image_preview_route.dart';
+import 'package:imagepreview/image_preview_view.dart';
 import 'package:imagepreview/primitive_navigation_bar.dart';
 import 'package:imagepreview/support_activity_indicator.dart';
-import 'package:photo_view/photo_view.dart';
-import 'package:photo_view/photo_view_gallery.dart';
+
+const double _kMaxDragVelocity = 100;
+const double _kMaxDragDistance = 200;
+const Duration _kDuration = Duration(milliseconds: 300);
 
 typedef ImagePreviewNavigationBarBuilder = Widget Function(
   BuildContext context,
@@ -20,27 +24,6 @@ typedef ImagePreviewNavigationBarBuilder = Widget Function(
   int count,
   VoidCallback onBackPressed,
 );
-
-class ImageOptions {
-  final String url;
-  final String tag;
-
-  const ImageOptions({
-    @required this.url,
-    this.tag,
-  });
-
-  bool get isEmpty => url == null || url.isEmpty;
-
-  bool get isNotEmpty => url != null && url.isNotEmpty;
-
-  ImageOptions copyWith({String url, String tag}) {
-    return ImageOptions(
-      url: url ?? this.url,
-      tag: tag ?? this.tag,
-    );
-  }
-}
 
 class ImagePreview {
   static Future<T> preview<T>(
@@ -115,155 +98,6 @@ class ImagePreview {
   }
 }
 
-class ImagePreviewRoute<T> extends PageRoute<T> {
-  ImagePreviewRoute({
-    @required this.builder,
-    this.opaque = true,
-    this.barrierDismissible = false,
-    this.barrierColor,
-    this.barrierLabel,
-    this.maintainState = true,
-    RouteSettings settings,
-    bool fullscreenDialog = false,
-  })  : assert(builder != null),
-        assert(opaque != null),
-        assert(barrierDismissible != null),
-        assert(maintainState != null),
-        assert(fullscreenDialog != null),
-        super(
-          settings: settings,
-          fullscreenDialog: fullscreenDialog,
-        );
-
-  final WidgetBuilder builder;
-
-  @override
-  Duration get transitionDuration => const Duration(milliseconds: 300);
-
-  @override
-  final bool opaque;
-
-  @override
-  final bool barrierDismissible;
-
-  @override
-  final Color barrierColor;
-
-  @override
-  final String barrierLabel;
-
-  @override
-  final bool maintainState;
-
-  @override
-  Widget buildTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
-    return FadeTransition(
-      opacity: Tween(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(
-          parent: animation,
-          curve: Curves.fastOutSlowIn,
-        ),
-      ),
-      child: child,
-    );
-  }
-
-  @override
-  Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
-    final Widget child = builder(context);
-    final Widget result = Semantics(
-      scopesRoute: true,
-      explicitChildNodes: true,
-      child: child,
-    );
-    assert(() {
-      if (child == null) {
-        throw FlutterError.fromParts(<DiagnosticsNode>[
-          ErrorSummary('The builder for route "${settings.name}" returned null.'),
-          ErrorDescription('Route builders must never return null.'),
-        ]);
-      }
-      return true;
-    }());
-    return result;
-  }
-
-  @override
-  String get debugLabel => '${super.debugLabel}(${settings.name})';
-}
-
-class _HeroTag {
-  const _HeroTag(this.url);
-
-  final String url;
-
-  @override
-  String toString() => url;
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) {
-      return true;
-    }
-    if (other.runtimeType != runtimeType) {
-      return false;
-    }
-    return other is _HeroTag && other.url == url;
-  }
-
-  @override
-  int get hashCode {
-    return identityHashCode(url);
-  }
-}
-
-class ImagePreviewHero extends StatelessWidget {
-  final String tag;
-  final Widget child;
-  final CreateRectTween createRectTween;
-  final HeroFlightShuttleBuilder flightShuttleBuilder;
-  final HeroPlaceholderBuilder placeholderBuilder;
-  final bool transitionOnUserGestures;
-
-  const ImagePreviewHero({
-    Key key,
-    @required this.tag,
-    @required this.child,
-    this.createRectTween,
-    this.flightShuttleBuilder,
-    this.placeholderBuilder = _buildPlaceholder,
-    this.transitionOnUserGestures = false,
-  })  : assert(child != null),
-        assert(transitionOnUserGestures != null),
-        super(key: key);
-
-  static Widget _buildPlaceholder(BuildContext context, Size heroSize, Widget child) {
-    return child;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (tag == null || tag.isEmpty) {
-      return child;
-    }
-    return Hero(
-      tag: _buildHeroTag(tag),
-      child: child,
-      createRectTween: createRectTween,
-      flightShuttleBuilder: flightShuttleBuilder,
-      placeholderBuilder: placeholderBuilder,
-      transitionOnUserGestures: transitionOnUserGestures,
-    );
-  }
-
-  static Object _buildHeroTag(String url) {
-    if (url == null || url.isEmpty) {
-      return null;
-    }
-    return _HeroTag('imagePreview:$url');
-  }
-}
-
 class ImagePreviewPage extends StatefulWidget {
   final int initialIndex;
   final List<ImageOptions> images;
@@ -302,121 +136,56 @@ class ImagePreviewPage extends StatefulWidget {
   _ImagePreviewPageState createState() => _ImagePreviewPageState();
 }
 
-const double _kMaxDragDistance = 200;
-const Duration _kDuration = Duration(milliseconds: 300);
-
 class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerProviderStateMixin {
-  final _navigationBarKey = GlobalKey();
-  final _bottomBarKey = GlobalKey();
-
   int _currentIndex = 0;
-  PageController _pageController;
-  Offset _startPosition;
-  Offset _translationPosition;
-  double _scaleOffset;
-  double _opacity;
-  double _dragDistance;
-  double _navBarOffsetPixels;
-  double _bottomOffsetPixels;
+  double _opacity = 1.0;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    _pageController = PageController(initialPage: widget.initialIndex);
-    _pageController.addListener(_reset);
-    _reset();
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
   }
 
   _onPageChanged(int index) {
     _currentIndex = index;
-    setState(() {});
   }
 
-  _onTap() {
+  _onBackPressed() {
     if (widget.onIndexChanged != null) {
       widget.onIndexChanged(_currentIndex);
     }
-    Navigator.pop(context, _currentIndex);
+    Navigator.maybePop(context, _currentIndex);
   }
 
-  _onLongPress() {
-    var imageOptions = widget.images[_currentIndex];
-    if (imageOptions != null && widget.onLongPressed != null) {
-      widget.onLongPressed(imageOptions);
+  _onPressed(ImageOptions options) {
+    _onBackPressed();
+  }
+
+  _onLongPressed(ImageOptions options) {
+    if (widget.onLongPressed != null) {
+      widget.onLongPressed(options);
     }
   }
 
-  _onScaleStateChanged(PhotoViewScaleState scaleState) {
-    if (_translationPosition != Offset.zero) {
-      return;
+  bool _onDragEndCallback(double dragDistance, double velocity) {
+    if (dragDistance > _kMaxDragDistance / 2 || velocity >= _kMaxDragVelocity) {
+      _onBackPressed();
+      return true;
     }
-    double navBarOffsetPixels;
-    double bottomOffsetPixels;
-    switch (scaleState) {
-      case PhotoViewScaleState.covering:
-      case PhotoViewScaleState.originalSize:
-      case PhotoViewScaleState.zoomedIn:
-        navBarOffsetPixels = -_navigationBarKey.currentContext?.size?.height ?? 0;
-        bottomOffsetPixels = -_bottomBarKey.currentContext?.size?.height ?? 0;
-        break;
-      case PhotoViewScaleState.initial:
-      case PhotoViewScaleState.zoomedOut:
-      default:
-        navBarOffsetPixels = 0;
-        bottomOffsetPixels = 0;
-        break;
-    }
-    if (navBarOffsetPixels != _navBarOffsetPixels || bottomOffsetPixels != _bottomOffsetPixels) {
-      _navBarOffsetPixels = navBarOffsetPixels;
-      _bottomOffsetPixels = bottomOffsetPixels;
-      setState(() {});
-    }
+    return false;
   }
 
-  _onVerticalDragStart(DragStartDetails details) {
-    _startPosition = details.localPosition;
-  }
-
-  _onVerticalDragUpdate(DragUpdateDetails details) {
-    var size = MediaQuery.of(context).size;
-    var positionOffset = details.localPosition - _startPosition;
-    _dragDistance = positionOffset.dy.abs();
-    _scaleOffset = _dragDistance / (size.height * 2);
-    _opacity = (1 - _dragDistance / _kMaxDragDistance).clamp(0.0, 1.0);
-    var barOffset = _dragDistance < 0 ? 0 : -_dragDistance / _kMaxDragDistance;
-    _navBarOffsetPixels = (_navigationBarKey.currentContext?.size?.height ?? 0) * barOffset;
-    _bottomOffsetPixels = (_bottomBarKey.currentContext?.size?.height ?? 0) * barOffset;
-    _translationPosition = positionOffset + _startPosition * _scaleOffset;
-    setState(() {});
-  }
-
-  _onVerticalDragEnd(DragEndDetails details) {
-    if (_dragDistance > _kMaxDragDistance / 2) {
-      _onTap();
+  bool _onDragNotification(DragNotification notification) {
+    if (notification is DragUpdateNotification) {
+      _opacity = notification.opacity;
     } else {
-      _reset();
+      _opacity = 1.0;
     }
-  }
-
-  _reset() {
-    _startPosition = Offset.zero;
-    _translationPosition = Offset.zero;
-    _scaleOffset = 0.0;
-    _opacity = 1.0;
-    _dragDistance = 0.0;
-    _navBarOffsetPixels = 0.0;
-    _bottomOffsetPixels = 0.0;
     setState(() {});
+    return false;
   }
 
-  ImageProvider _childProvider(int index) {
+  ImageProvider _buildImageProvider(BuildContext context, int index) {
     final url = widget.images[index].url;
     if (url.startsWith('http')) {
       return CachedNetworkImageProvider(url);
@@ -439,172 +208,54 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> with SingleTickerPr
     );
   }
 
-  PhotoViewGalleryPageOptions _buildPageOptions(BuildContext context, int index) {
-    final image = widget.images[index];
-    final heroTag = ImagePreviewHero._buildHeroTag(image.tag);
-    return PhotoViewGalleryPageOptions(
-      imageProvider: _childProvider(index),
-      initialScale: PhotoViewComputedScale.contained,
-      basePosition: Alignment.center,
-      tightMode: true,
-      gestureDetectorBehavior: HitTestBehavior.translucent,
-      heroAttributes: heroTag == null ? null : PhotoViewHeroAttributes(tag: heroTag),
-    );
-  }
-
-  Widget _buildNavigationBar() {
+  Widget _buildNavigationBar(BuildContext context, int index, int count) {
     if (widget.navigationBarBuilder == null) {
       return null;
     }
-    return Builder(
-      builder: (context) {
-        return widget.navigationBarBuilder(
-          context,
-          _currentIndex,
-          widget.images.length,
-          _onTap,
-        );
-      },
+    return widget.navigationBarBuilder(
+      context,
+      index,
+      count,
+      _onBackPressed,
     );
-  }
-
-  Widget _buildBottomBar() {
-    Widget bottomBar;
-    if (widget.bottomBarBuilder != null) {
-      bottomBar = Builder(
-        builder: (context) {
-          return widget.bottomBarBuilder(
-            context,
-            _currentIndex,
-          );
-        },
-      );
-    }
-    if (bottomBar != null) {
-      bottomBar = SingleChildScrollView(
-        child: bottomBar,
-      );
-    }
-    return bottomBar;
   }
 
   @override
   Widget build(BuildContext context) {
-    var scale = 1.0 - _scaleOffset;
-    var positionOffset = _translationPosition;
-    var duration = Duration(
-      milliseconds: positionOffset == Offset.zero ? 200 : 0,
-    );
+    var duration = _opacity == 1.0 ? _kDuration : Duration.zero;
     var queryData = MediaQuery.of(context);
     return CupertinoTheme(
       data: CupertinoTheme.of(context).copyWith(
         primaryColor: CupertinoColors.white,
         brightness: Brightness.dark,
+        scaffoldBackgroundColor: CupertinoColors.black.withOpacity(0),
       ),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
         child: CupertinoPageScaffold(
-          backgroundColor: CupertinoColors.black.withOpacity(_opacity),
           child: MediaQuery(
             data: queryData.copyWith(
               textScaleFactor: 1.0,
             ),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onVerticalDragStart: _onVerticalDragStart,
-              onVerticalDragUpdate: _onVerticalDragUpdate,
-              onVerticalDragEnd: _onVerticalDragEnd,
-              onLongPress: _onLongPress,
-              onTap: _onTap,
-              child: Stack(
-                fit: StackFit.expand,
-                children: <Widget>[
-                  AnimatedContainer(
-                    transform: Matrix4.translationValues(
-                      positionOffset.dx,
-                      positionOffset.dy,
-                      0,
-                    )..scale(scale, scale),
-                    duration: duration,
-                    curve: Curves.ease,
-                    child: PhotoViewGallery.builder(
-                      itemCount: widget.images.length,
-                      scrollDirection: Axis.horizontal,
-                      enableRotation: true,
-                      gaplessPlayback: true,
-                      backgroundDecoration: BoxDecoration(
-                        color: CupertinoColors.black.withOpacity(0.0),
-                      ),
-                      pageController: _pageController,
-                      onPageChanged: _onPageChanged,
-                      loadingBuilder: _buildLoading,
-                      scaleStateChangedCallback: _onScaleStateChanged,
-                      builder: _buildPageOptions,
-                    ),
-                  ),
-                  AnimatedPositioned(
-                    left: 0,
-                    right: 0,
-                    bottom: _bottomOffsetPixels,
-                    duration: duration,
-                    child: DefaultTextStyle(
-                      style: DefaultTextStyle.of(context).style.copyWith(
-                        shadows: [
-                          BoxShadow(
-                            color: CupertinoColors.black.withOpacity(0.6),
-                            blurRadius: 0.8,
-                            offset: Offset(0, 1.0),
-                          ),
-                        ],
-                      ),
-                      child: Container(
-                        key: _bottomBarKey,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              CupertinoColors.black.withOpacity(0.0),
-                              CupertinoColors.black.withOpacity(0.6),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                        ),
-                        constraints: BoxConstraints(
-                          minHeight: 0,
-                          maxHeight: queryData.size.height / 4,
-                        ),
-                        child: AnimatedSize(
-                          duration: _kDuration,
-                          vsync: this,
-                          alignment: Alignment.topCenter,
-                          child: ClipRect(
-                            child: _buildBottomBar(),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  AnimatedPositioned(
-                    left: 0,
-                    top: _navBarOffsetPixels,
-                    right: 0,
-                    duration: duration,
-                    child: Container(
-                      key: _navigationBarKey,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            CupertinoColors.black.withOpacity(0.6),
-                            CupertinoColors.black.withOpacity(0.0),
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                      ),
-                      child: _buildNavigationBar(),
-                    ),
-                  ),
-                ],
+            child: AnimatedContainer(
+              duration: duration,
+              color: CupertinoColors.black.withOpacity(_opacity),
+              child: NotificationListener<DragNotification>(
+                onNotification: _onDragNotification,
+                child: ImagePreviewView(
+                  initialIndex: widget.initialIndex,
+                  images: widget.images,
+                  imageProviderBuilder: _buildImageProvider,
+                  navigationBarBuilder: _buildNavigationBar,
+                  bottomBarBuilder: widget.bottomBarBuilder,
+                  loadingBuilder: _buildLoading,
+                  duration: _kDuration,
+                  dragReferenceDistance: _kMaxDragDistance,
+                  onPressed: _onPressed,
+                  onLongPressed: _onLongPressed,
+                  onPageChanged: _onPageChanged,
+                  onDragEndCallback: _onDragEndCallback,
+                ),
               ),
             ),
           ),
