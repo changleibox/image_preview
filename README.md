@@ -2,7 +2,7 @@
 
 怎么用Flutter自定义一个图片预览页面，具有下滑关闭，点击关闭，放大缩小等功能。
 
-该项目已废弃，请使用[preimage](http://https://github.com/changleibox/preimage)代替。
+该项目已废弃，请使用[preimage](https://github.com/changleibox/preimage)代替。
 
 ## Getting Started
 
