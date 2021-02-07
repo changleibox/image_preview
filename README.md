@@ -4,7 +4,7 @@
 
 该项目已废弃，请使用[preimage](https://github.com/changleibox/preimage)代替。
 
-__`preimage`修复了如果在下拉关闭的时候，如果图片有位移或者缩放的时候，会有一定几率出现拉下漂移的问题。__
+__`preimage`修复了如果在下拉关闭的时候，如果图片有位移或者缩放的时候，会有一定几率出现下拉漂移的问题。__
 
 ## Getting Started
 
